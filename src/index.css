@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cream: #FFFAD3;
+  --color-cream-light: #FFFEE8;
+  --color-cream-dark: #F5EEB0;
+  
+  --color-bg-base: #F8F9F7;
+  --color-surface: #FFFFFF;
+  
+  --color-text-primary: #202B2A;
+  --color-text-secondary: #687572;
+  --color-text-muted: #8E9B98;
+  
+  --color-teal-primary: #176B62;
+  --color-teal-dark: #12554E;
+  --color-teal-light: #20877B;
+  --color-teal-soft: #E8F4F2;
+  
+  --color-border-subtle: #E7EAE4;
+  --color-border-focus: #176B62;
+  
+  --color-success: #21865B;
+  --color-success-soft: #EBF7F1;
+  
+  --color-warning: #D99A22;
+  --color-warning-soft: #FEF8EC;
+  
+  --color-danger: #D9534F;
+  --color-danger-soft: #FDF2F2;
+  
+  --color-info: #3C79B5;
+  --color-info-soft: #EEF4FA;
+}
+
+:root {
+  --color-accent: #FFFAD3;
+  --color-background: #F8F9F7;
+  --color-surface: #FFFFFF;
+  --color-text-primary: #202B2A;
+  --color-text-secondary: #687572;
+  --color-primary: #176B62;
+  --color-border: #E7EAE4;
+  --color-success: #21865B;
+  --color-warning: #D99A22;
+  --color-danger: #D9534F;
+  --color-info: #3C79B5;
+
+  --radius-card: 18px;
+  --radius-control: 12px;
+  --shadow-card: 0 4px 20px rgba(32, 43, 42, 0.05);
+  --shadow-dropdown: 0 10px 30px rgba(32, 43, 42, 0.08);
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F1F4F1;
+}
+::-webkit-scrollbar-thumb {
+  background: #C8D1CD;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #176B62;
+}
+
+/* Soft transition class */
+.transition-smooth {
+  transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Custom clinical card class */
+.clinical-card {
+  background: #FFFFFF;
+  border: 1px solid #E7EAE4;
+  border-radius: 18px;
+  box-shadow: 0 4px 20px rgba(32, 43, 42, 0.04);
+}
+
+/* Accent highlight card */
+.accent-cream-card {
+  background: linear-gradient(135deg, #FFFAD3 0%, #FFFDF0 100%);
+  border: 1px solid #F5EEB0;
+  border-radius: 18px;
+  box-shadow: 0 4px 20px rgba(217, 154, 34, 0.06);
+}

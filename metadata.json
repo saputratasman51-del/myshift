@@ -1,0 +1,6 @@
+{
+  "name": "Sistem Informasi Shift Jaga Lab RSUD SMJ I",
+  "description": "Sistem Informasi Shift Jaga Instalasi Laboratorium Patologi Klinik RSUD Sultan Muhammad Jamaludin I Kayong Utara untuk ATLM, Koordinator, dan Administrator.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
