@@ -824,7 +824,7 @@ class LaboratoryStore {
         }
       });
       if (usersChanged) {
-        this.setItem('users', this.users);
+        this.persistData('users', this.users);
       }
     } catch (e) {
       console.warn('Error loading state from localStorage:', e);
@@ -946,10 +946,32 @@ class LaboratoryStore {
     }
   }
 
-  private setItem(key: string, value: any): void {
+  private async persistData(key: string, value: any): Promise<void> {
     try {
-      safeSetStorage(STORAGE_KEY_PREFIX + key, JSON.stringify(value));
-      this.syncToSupabase(key, value);
+      // Ensure dependency tables are synced before dependent tables
+      if (key === 'users') {
+        await this.syncToSupabase('staff', this.staff);
+      }
+      if (key === 'schedules') {
+        await this.syncToSupabase('staff', this.staff);
+        await this.syncToSupabase('shifts', this.shifts);
+      }
+      if (key === 'attendance') {
+        await this.syncToSupabase('staff', this.staff);
+        await this.syncToSupabase('schedules', this.schedules);
+      }
+      if (key === 'handovers') {
+        await this.syncToSupabase('shifts', this.shifts);
+        await this.syncToSupabase('staff', this.staff);
+      }
+      if (key === 'swaps') {
+        await this.syncToSupabase('staff', this.staff);
+        await this.syncToSupabase('schedules', this.schedules);
+      }
+      if (key === 'leaves') {
+        await this.syncToSupabase('staff', this.staff);
+      }
+      await this.syncToSupabase(key, value);
     } catch (e) {
       console.error(`Failed to persist ${key}:`, e);
     }
@@ -964,7 +986,7 @@ class LaboratoryStore {
     this.listeners.forEach(cb => cb());
   }
 
-  public resetToDefaults() {
+  public async resetToDefaults() {
     this.users = [...DEFAULT_USERS];
     this.staff = [...DEFAULT_STAFF];
     this.shifts = [...DEFAULT_SHIFTS];
@@ -977,16 +999,18 @@ class LaboratoryStore {
     this.auditLogs = generateInitialAuditLogs();
     this.currentUser = this.users[1];
 
-    this.setItem('users', this.users);
-    this.setItem('staff', this.staff);
-    this.setItem('shifts', this.shifts);
-    this.setItem('schedules', this.schedules);
-    this.setItem('swaps', this.swaps);
-    this.setItem('leaves', this.leaves);
-    this.setItem('attendance', this.attendance);
-    this.setItem('handovers', this.handovers);
-    this.setItem('notifications', this.notifications);
-    this.setItem('auditLogs', this.auditLogs);
+    // Must persist in order of dependency to avoid FK violations
+    await this.persistData('staff', this.staff);
+    await this.persistData('users', this.users);
+    await this.persistData('shifts', this.shifts);
+    await this.persistData('schedules', this.schedules);
+    await this.persistData('swaps', this.swaps);
+    await this.persistData('leaves', this.leaves);
+    await this.persistData('attendance', this.attendance);
+    await this.persistData('handovers', this.handovers);
+    await this.persistData('notifications', this.notifications);
+    await this.persistData('auditLogs', this.auditLogs);
+    
     safeSetStorage(STORAGE_KEY_PREFIX + 'currentUserUid', this.currentUser.uid);
 
     this.notify();
@@ -1073,7 +1097,7 @@ class LaboratoryStore {
           createdAt: matchingStaff.createdAt,
         };
         this.users.push(user);
-        this.setItem('users', this.users);
+        this.persistData('users', this.users);
       }
       return { user, staff: matchingStaff };
     }
@@ -1162,7 +1186,7 @@ class LaboratoryStore {
     const uIdx = this.users.findIndex(u => u.uid === user.uid);
     if (uIdx !== -1) {
       this.users[uIdx].password = newPassword;
-      this.setItem('users', this.users);
+      this.persistData('users', this.users);
 
       if (this.currentUser && this.currentUser.uid === user.uid) {
         this.currentUser.password = newPassword;
@@ -1197,7 +1221,7 @@ class LaboratoryStore {
     if (uIdx !== -1) {
       this.users[uIdx].password = newPassword;
       this.currentUser.password = newPassword;
-      this.setItem('users', this.users);
+      this.persistData('users', this.users);
       this.logActivity('PASSWORD_CHANGE', 'user', this.currentUser.uid, null, null, `Petugas ${this.currentUser.displayName} mengubah kata sandi pribadi`);
       this.notify();
       return { success: true, message: 'Kata sandi pribadi Anda berhasil diperbarui.' };
@@ -1215,7 +1239,7 @@ class LaboratoryStore {
     const uIdx = this.users.findIndex(u => u.staffId === staffId || u.email.toLowerCase() === staff.email.toLowerCase());
     if (uIdx !== -1) {
       this.users[uIdx].password = newPassword;
-      this.setItem('users', this.users);
+      this.persistData('users', this.users);
       this.logActivity('ADMIN_PASSWORD_RESET', 'staff', staffId, null, { staffId }, `Administrator mereset kata sandi petugas ${staff.fullName}`);
       this.notify();
       return {
@@ -1235,7 +1259,7 @@ class LaboratoryStore {
         createdAt: new Date().toISOString(),
       };
       this.users.push(newUser);
-      this.setItem('users', this.users);
+      this.persistData('users', this.users);
       this.notify();
       return {
         success: true,
@@ -1273,7 +1297,7 @@ class LaboratoryStore {
       updatedAt: new Date().toISOString(),
     };
     this.schedules.push(newSchedule);
-    this.setItem('schedules', this.schedules);
+    this.persistData('schedules', this.schedules);
 
     this.logActivity(
       'SCHEDULE_CREATE',
@@ -1298,7 +1322,7 @@ class LaboratoryStore {
         updatedAt: new Date().toISOString(),
         updatedBy: this.currentUser?.staffId || 'SYSTEM',
       };
-      this.setItem('schedules', this.schedules);
+      this.persistData('schedules', this.schedules);
 
       // Notify affected staff if schedule changed
       this.addNotification({
@@ -1320,7 +1344,7 @@ class LaboratoryStore {
     if (index !== -1) {
       const before = this.schedules[index];
       this.schedules.splice(index, 1);
-      this.setItem('schedules', this.schedules);
+      this.persistData('schedules', this.schedules);
 
       this.logActivity('SCHEDULE_DELETE', 'schedule', scheduleId, before, null, reason);
       this.notify();
@@ -1339,7 +1363,7 @@ class LaboratoryStore {
     }
 
     if (count > 0) {
-      this.setItem('schedules', this.schedules);
+      this.persistData('schedules', this.schedules);
       this.addNotification({
         recipientId: 'all',
         title: 'Jadwal Baru Diterbitkan',
@@ -1363,7 +1387,7 @@ class LaboratoryStore {
       createdAt: new Date().toISOString(),
     };
     this.staff.push(newStaff);
-    this.setItem('staff', this.staff);
+    this.persistData('staff', this.staff);
 
     if (createAccount) {
       const newUser: UserAccount = {
@@ -1376,7 +1400,7 @@ class LaboratoryStore {
         createdAt: new Date().toISOString(),
       };
       this.users.push(newUser);
-      this.setItem('users', this.users);
+      this.persistData('users', this.users);
     }
 
     this.logActivity('STAFF_CREATE', 'staff', staffId, null, newStaff, `Menambah data petugas ${newStaff.fullName}`);
@@ -1389,7 +1413,7 @@ class LaboratoryStore {
     if (index !== -1) {
       const before = { ...this.staff[index] };
       this.staff[index] = { ...this.staff[index], ...updates };
-      this.setItem('staff', this.staff);
+      this.persistData('staff', this.staff);
 
       // Sync role/name to user account
       const userIdx = this.users.findIndex(u => u.staffId === staffId);
@@ -1398,7 +1422,7 @@ class LaboratoryStore {
         if (updates.email) this.users[userIdx].email = updates.email;
         if (updates.role) this.users[userIdx].role = updates.role;
         if (updates.active !== undefined) this.users[userIdx].active = updates.active;
-        this.setItem('users', this.users);
+        this.persistData('users', this.users);
       }
 
       this.logActivity('STAFF_UPDATE', 'staff', staffId, before, this.staff[index], 'Memperbarui data petugas');
@@ -1424,7 +1448,7 @@ class LaboratoryStore {
       createdAt: new Date().toISOString(),
     };
     this.swaps.unshift(newSwap);
-    this.setItem('swaps', this.swaps);
+    this.persistData('swaps', this.swaps);
 
     // Notify coordinator
     this.addNotification({
@@ -1462,10 +1486,10 @@ class LaboratoryStore {
       schedB.status = 'changed';
       schedA.updatedAt = new Date().toISOString();
       schedB.updatedAt = new Date().toISOString();
-      this.setItem('schedules', this.schedules);
+      this.persistData('schedules', this.schedules);
     }
 
-    this.setItem('swaps', this.swaps);
+    this.persistData('swaps', this.swaps);
 
     // Notify both staff members
     this.addNotification({
@@ -1497,7 +1521,7 @@ class LaboratoryStore {
     swap.reviewedBy = this.currentUser?.staffId || 'COORD';
     swap.reviewedAt = new Date().toISOString();
     swap.reviewNotes = reviewNotes;
-    this.setItem('swaps', this.swaps);
+    this.persistData('swaps', this.swaps);
 
     this.addNotification({
       recipientId: swap.requesterStaffId,
@@ -1513,7 +1537,7 @@ class LaboratoryStore {
   }
 
   // --- Leave Actions ---
-  public createLeaveRequest(leave: Omit<LeaveRequest, 'requestId' | 'status' | 'createdAt'>): LeaveRequest {
+  public async createLeaveRequest(leave: Omit<LeaveRequest, 'requestId' | 'status' | 'createdAt'>): Promise<LeaveRequest> {
     const newLeave: LeaveRequest = {
       ...leave,
       requestId: `LEV-${String(this.leaves.length + 1).padStart(3, '0')}-${Date.now().toString().slice(-4)}`,
@@ -1521,21 +1545,21 @@ class LaboratoryStore {
       createdAt: new Date().toISOString(),
     };
     this.leaves.unshift(newLeave);
-    this.setItem('leaves', this.leaves);
+    await this.persistData('leaves', this.leaves);
 
     this.logActivity('LEAVE_REQUEST_CREATE', 'leave', newLeave.requestId, null, newLeave, leave.reason);
     this.notify();
     return newLeave;
   }
 
-  public approveLeaveRequest(requestId: string, reviewNotes = 'Disetujui'): void {
+  public async approveLeaveRequest(requestId: string, reviewNotes = 'Disetujui'): Promise<void> {
     const leave = this.leaves.find(l => l.requestId === requestId);
     if (!leave) return;
     leave.status = 'approved';
     leave.reviewedBy = this.currentUser?.staffId || 'COORD';
     leave.reviewedAt = new Date().toISOString();
     leave.reviewNotes = reviewNotes;
-    this.setItem('leaves', this.leaves);
+    await this.persistData('leaves', this.leaves);
 
     this.addNotification({
       recipientId: leave.staffId,
@@ -1550,14 +1574,14 @@ class LaboratoryStore {
     this.notify();
   }
 
-  public rejectLeaveRequest(requestId: string, reviewNotes = 'Ditolak karena kuota pelayanan'): void {
+  public async rejectLeaveRequest(requestId: string, reviewNotes = 'Ditolak karena kuota pelayanan'): Promise<void> {
     const leave = this.leaves.find(l => l.requestId === requestId);
     if (!leave) return;
     leave.status = 'rejected';
     leave.reviewedBy = this.currentUser?.staffId || 'COORD';
     leave.reviewedAt = new Date().toISOString();
     leave.reviewNotes = reviewNotes;
-    this.setItem('leaves', this.leaves);
+    await this.persistData('leaves', this.leaves);
 
     this.addNotification({
       recipientId: leave.staffId,
@@ -1579,7 +1603,7 @@ class LaboratoryStore {
     if (existing) {
       existing.checkIn = new Date().toISOString();
       if (notes) existing.notes = notes;
-      this.setItem('attendance', this.attendance);
+      this.persistData('attendance', this.attendance);
       this.notify();
       return existing;
     }
@@ -1595,7 +1619,7 @@ class LaboratoryStore {
       createdAt: new Date().toISOString(),
     };
     this.attendance.unshift(newRecord);
-    this.setItem('attendance', this.attendance);
+    this.persistData('attendance', this.attendance);
 
     this.logActivity('ATTENDANCE_CHECKIN', 'attendance', newRecord.attendanceId, null, newRecord, 'Petugas check-in shift');
     this.notify();
@@ -1607,7 +1631,7 @@ class LaboratoryStore {
     if (record) {
       record.checkOut = new Date().toISOString();
       if (notes) record.notes = (record.notes ? record.notes + ' | ' : '') + notes;
-      this.setItem('attendance', this.attendance);
+      this.persistData('attendance', this.attendance);
 
       this.logActivity('ATTENDANCE_CHECKOUT', 'attendance', attendanceId, null, { checkOut: record.checkOut }, 'Petugas check-out shift');
       this.notify();
@@ -1623,7 +1647,7 @@ class LaboratoryStore {
         correctedBy: this.currentUser?.displayName || 'Admin',
         correctionReason: reason,
       });
-      this.setItem('attendance', this.attendance);
+      this.persistData('attendance', this.attendance);
 
       this.logActivity('ATTENDANCE_CORRECTION', 'attendance', attendanceId, before, record, reason);
       this.notify();
@@ -1639,7 +1663,7 @@ class LaboratoryStore {
       createdAt: new Date().toISOString(),
     };
     this.handovers.unshift(newHandover);
-    this.setItem('handovers', this.handovers);
+    this.persistData('handovers', this.handovers);
 
     this.logActivity('HANDOVER_SUBMIT', 'handover', newHandover.handoverId, null, newHandover, 'Serah terima jaga dibuat');
     this.notify();
@@ -1651,7 +1675,7 @@ class LaboratoryStore {
     if (item) {
       item.status = 'confirmed';
       item.confirmedAt = new Date().toISOString();
-      this.setItem('handovers', this.handovers);
+      this.persistData('handovers', this.handovers);
 
       this.logActivity('HANDOVER_CONFIRM', 'handover', handoverId, null, { status: 'confirmed' }, 'Serah terima jaga diverifikasi penerima');
       this.notify();
@@ -1663,7 +1687,7 @@ class LaboratoryStore {
     if (item) {
       const before = { ...item };
       Object.assign(item, updates);
-      this.setItem('handovers', this.handovers);
+      this.persistData('handovers', this.handovers);
       this.logActivity('HANDOVER_UPDATE', 'handover', handoverId, before, item, 'Berita acara serah terima / QC diperbarui');
       this.notify();
     }
@@ -1673,7 +1697,7 @@ class LaboratoryStore {
     const index = this.handovers.findIndex(h => h.handoverId === handoverId);
     if (index !== -1) {
       const removed = this.handovers.splice(index, 1)[0];
-      this.setItem('handovers', this.handovers);
+      this.persistData('handovers', this.handovers);
       this.logActivity('HANDOVER_DELETE', 'handover', handoverId, removed, null, 'Berita acara serah terima dihapus');
       this.notify();
     }
@@ -1687,7 +1711,7 @@ class LaboratoryStore {
       createdAt: new Date().toISOString(),
     };
     this.notifications.unshift(item);
-    this.setItem('notifications', this.notifications);
+    this.persistData('notifications', this.notifications);
     this.notify();
   }
 
@@ -1695,14 +1719,14 @@ class LaboratoryStore {
     const notif = this.notifications.find(n => n.notificationId === id);
     if (notif) {
       notif.isRead = true;
-      this.setItem('notifications', this.notifications);
+      this.persistData('notifications', this.notifications);
       this.notify();
     }
   }
 
   public markAllNotificationsAsRead(): void {
     this.notifications.forEach(n => (n.isRead = true));
-    this.setItem('notifications', this.notifications);
+    this.persistData('notifications', this.notifications);
     this.notify();
   }
 
@@ -1730,7 +1754,7 @@ class LaboratoryStore {
     this.auditLogs.unshift(newLog);
     // Keep max 200 logs locally
     if (this.auditLogs.length > 200) this.auditLogs.pop();
-    this.setItem('auditLogs', this.auditLogs);
+    this.persistData('auditLogs', this.auditLogs);
   }
 
   // --- Shift Config ---
@@ -1739,7 +1763,7 @@ class LaboratoryStore {
     if (shift) {
       const before = { ...shift };
       Object.assign(shift, updates);
-      this.setItem('shifts', this.shifts);
+      this.persistData('shifts', this.shifts);
       this.logActivity('SHIFT_CONFIG_UPDATE', 'shift', shiftId, before, shift, 'Pembaruan konfigurasi shift jaga');
       this.notify();
     }
