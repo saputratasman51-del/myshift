@@ -851,50 +851,95 @@ class LaboratoryStore {
     this.notify();
 
     try {
-      if (tableKey === 'staff' && Array.isArray(value)) {
-        const dbStaff = value.map((s: Staff) => ({
-          staff_id: s.staffId,
-          full_name: s.fullName,
-          employee_number: s.employeeNumber,
-          position: s.position,
-          email: s.email,
-          phone: s.phone,
-          active: s.active,
-          avatar_url: s.avatarUrl,
-          created_at: s.createdAt,
-        }));
-        await client.from('staff').upsert(dbStaff);
-      } else if (tableKey === 'users' && Array.isArray(value)) {
-          const dbUsers = value.map((u: UserAccount) => ({
-              uid: u.uid,
-              staff_id: u.staffId,
-              email: u.email,
-              display_name: u.displayName,
-              role: u.role,
-              active: u.active,
-              created_at: u.createdAt,
-          }));
-          await client.from('app_users').upsert(dbUsers);
-      } else if (tableKey === 'schedules' && Array.isArray(value)) {
-          const dbSchedules = value.map((s: Schedule) => ({
-              schedule_id: s.scheduleId,
-              staff_id: s.staffId,
-              shift_id: s.shiftId,
-              date: s.date,
-              start_at: s.startAt,
-              end_at: s.endAt,
-              status: s.status,
-              notes: s.notes,
-              created_by: s.createdBy,
-              updated_by: s.updatedBy,
-              created_at: s.createdAt,
-              updated_at: s.updatedAt,
-          }));
-          await client.from('schedules').upsert(dbSchedules);
+      console.log(`Syncing table: ${tableKey}`);
+      let query;
+      switch (tableKey) {
+        case 'staff':
+          query = client.from('staff').upsert(value.map((s: Staff) => ({
+            staff_id: s.staffId, full_name: s.fullName, employee_number: s.employeeNumber,
+            position: s.position, email: s.email, phone: s.phone, active: s.active,
+            avatar_url: s.avatarUrl, created_at: s.createdAt, updated_at: new Date().toISOString()
+          })));
+          break;
+        case 'users':
+          query = client.from('app_users').upsert(value.map((u: UserAccount) => ({
+            uid: u.uid, staff_id: u.staffId, email: u.email, display_name: u.displayName,
+            role: u.role, active: u.active, created_at: u.createdAt, updated_at: new Date().toISOString()
+          })));
+          break;
+        case 'shifts':
+          query = client.from('shifts').upsert(value.map((s: ShiftConfig) => ({
+            shift_id: s.shiftId, name: s.name, start_time: s.startTime, end_time: s.endTime,
+            minimum_staff: s.minimumStaff, color: s.color, is_overnight: s.isOvernight,
+            active: s.active, created_at: new Date().toISOString()
+          })));
+          break;
+        case 'schedules':
+          query = client.from('schedules').upsert(value.map((s: Schedule) => ({
+            schedule_id: s.scheduleId, staff_id: s.staffId, shift_id: s.shiftId, date: s.date,
+            start_at: s.startAt, end_at: s.endAt, status: s.status, notes: s.notes,
+            created_by: s.createdBy, updated_by: s.updatedBy, created_at: s.createdAt, updated_at: s.updatedAt
+          })));
+          break;
+        case 'swaps':
+          query = client.from('shift_swap_requests').upsert(value.map((s: ShiftSwapRequest) => ({
+            request_id: s.requestId, requester_staff_id: s.requesterStaffId, target_staff_id: s.targetStaffId,
+            source_schedule_id: s.sourceScheduleId, target_schedule_id: s.targetScheduleId,
+            reason: s.reason, status: s.status, reviewed_by: s.reviewedBy,
+            reviewed_at: s.reviewedAt, review_notes: s.reviewNotes, created_at: s.createdAt
+          })));
+          break;
+        case 'leaves':
+          query = client.from('leave_requests').upsert(value.map((l: LeaveRequest) => ({
+            request_id: l.requestId, staff_id: l.staffId, leave_type: l.leaveType,
+            start_date: l.startDate, end_date: l.endDate, reason: l.reason,
+            status: l.status, reviewed_by: l.reviewedBy, reviewed_at: l.reviewedAt,
+            review_notes: l.reviewNotes, created_at: l.createdAt
+          })));
+          break;
+        case 'attendance':
+          query = client.from('attendance').upsert(value.map((a: AttendanceRecord) => ({
+            attendance_id: a.attendanceId, staff_id: a.staffId, schedule_id: a.scheduleId,
+            date: a.date, check_in: a.checkIn, check_out: a.checkOut, status: a.status,
+            notes: a.notes, is_corrected: a.isCorrected, corrected_by: a.correctedBy,
+            correction_reason: a.correctionReason, created_at: a.createdAt
+          })));
+          break;
+        case 'handovers':
+          query = client.from('handovers').upsert(value.map((h: HandoverRecord) => ({
+            handover_id: h.handoverId, shift_id: h.shiftId, handover_date: h.handoverDate,
+            outgoing_staff_id: h.outgoingStaffId, incoming_staff_id: h.incomingStaffId,
+            pending_samples: h.pendingSamples, equipment_status: h.equipmentStatus,
+            reagent_notes: h.reagentNotes, follow_up_notes: h.followUpNotes, status: h.status,
+            confirmed_at: h.confirmedAt, created_at: h.createdAt
+          })));
+          break;
+        case 'notifications':
+          query = client.from('notifications').upsert(value.map((n: AppNotification) => ({
+            notification_id: n.notificationId, recipient_id: n.recipientId, title: n.title,
+            message: n.message, type: n.type, is_read: n.isRead, ref_id: n.refId,
+            created_at: n.createdAt
+          })));
+          break;
+        case 'auditLogs':
+          query = client.from('audit_logs').upsert(value.map((a: AuditLog) => ({
+            log_id: a.logId, actor_id: a.actorId, actor_name: a.actorName, action_type: a.actionType,
+            entity_type: a.entityType, entity_id: a.entityId, before_data: a.beforeData,
+            after_data: a.afterData, reason: a.reason, created_at: a.createdAt
+          })));
+          break;
+        default:
+          console.warn(`No mapping found for table: ${tableKey}`);
+          return;
       }
-      // Add other tables as needed based on supabase_schema.sql
-    } catch (e) {
+
+      const { error } = await query;
+      if (error) throw error;
+      console.log(`Successfully synced ${tableKey} to Supabase`);
+    } catch (e: any) {
       console.error(`Failed to sync ${tableKey} to Supabase:`, e);
+      if (e.message) console.error(`Sync error message: ${e.message}`);
+      if (e.details) console.error(`Sync error details: ${e.details}`);
     } finally {
         this.isSyncing = false;
         this.notify();
