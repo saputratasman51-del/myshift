@@ -5,6 +5,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Navbar } from './components/Navbar';
 import { Sidebar, NavTab } from './components/Sidebar';
+import { MobileBottomNav } from './components/MobileBottomNav';
 import { LoginView } from './components/LoginView';
 import { DashboardView } from './components/DashboardView';
 import { ScheduleView } from './components/ScheduleView';
@@ -126,7 +127,7 @@ export default function App() {
         />
 
         {/* Dynamic Content View Area */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full pb-20 lg:pb-8">
           {currentTab === 'dashboard' && (
             <DashboardView
               currentUser={currentUser}
@@ -172,6 +173,9 @@ export default function App() {
           )}
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav currentTab={currentTab} onSelectTab={setCurrentTab} />
 
       {/* Logout Confirmation Modal */}
       {showLogoutConfirm && (
