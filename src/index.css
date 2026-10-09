@@ -57,6 +57,9 @@ body {
   color: var(--color-text-primary);
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-size-adjust: 100%;
+  line-height: 1.5;
 }
 
 /* Custom Scrollbar */

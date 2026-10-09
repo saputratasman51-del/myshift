@@ -1430,12 +1430,21 @@ class LaboratoryStore {
     }
   }
 
-  public toggleStaffStatus(staffId: string): void {
-    const staff = this.staff.find(s => s.staffId === staffId);
-    if (staff) {
-      const newStatus = !staff.active;
-      this.updateStaff(staffId, { active: newStatus });
-      this.logActivity('STAFF_STATUS_CHANGE', 'staff', staffId, { active: !newStatus }, { active: newStatus }, `Mengubah status akun ${staff.fullName} menjadi ${newStatus ? 'Aktif' : 'Nonaktif'}`);
+  public deleteStaff(staffId: string): void {
+    const index = this.staff.findIndex(s => s.staffId === staffId);
+    if (index !== -1) {
+      const removed = this.staff.splice(index, 1)[0];
+      this.persistData('staff', this.staff);
+
+      // Remove associated user
+      const userIndex = this.users.findIndex(u => u.staffId === staffId);
+      if (userIndex !== -1) {
+        this.users.splice(userIndex, 1);
+        this.persistData('users', this.users);
+      }
+
+      this.logActivity('STAFF_DELETE', 'staff', staffId, removed, null, 'Petugas dihapus permanen dari sistem');
+      this.notify();
     }
   }
 

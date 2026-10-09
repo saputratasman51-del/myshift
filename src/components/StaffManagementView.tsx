@@ -310,6 +310,17 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({ curren
                             <UserCheck className="w-3.5 h-3.5" />
                           )}
                         </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Apakah Anda yakin ingin menghapus permanen data petugas ${staff.fullName}? Tindakan ini tidak dapat dibatalkan.`)) {
+                              labStore.deleteStaff(staff.staffId);
+                            }
+                          }}
+                          className="p-1.5 text-rose-700 hover:bg-rose-100 rounded-lg transition-colors cursor-pointer"
+                          title="Hapus Petugas Permanen"
+                        >
+                          <XCircle className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </td>
                   )}
