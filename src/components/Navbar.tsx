@@ -20,6 +20,7 @@ import { labStore } from '../services/store';
 import { getStoredSupabaseConfig } from '../services/supabase';
 import { LOGO_KAYONG_UTARA } from '../assets/images';
 import { NavTab } from './Sidebar';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface NavbarProps {
   currentUser: UserAccount;
@@ -233,6 +234,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 )}
               </button>
             )}
+
+            <PWAInstallButton />
 
             {/* Supabase Status Pill */}
             <button
